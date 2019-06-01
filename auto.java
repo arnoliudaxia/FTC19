@@ -57,7 +57,7 @@
   import java.util.List;
   import java.util.Locale;
 
-  @Autonomous(name="yindi", group="Linear Opmode")
+  @Autonomous(name="auto", group="Linear Opmode")
   public class auto extends LinearOpMode {
 
       //region 定义马达
@@ -67,12 +67,13 @@
       private DcMotor motor_zuohou;
       private DcMotor motor_youhou;
       private DcMotor motor_xuangua;
-      private DcMotor motor_tian;
+      private DcMotor motor_xuanzhuan;
       private double yp,rp;
       private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
       private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
       private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
       double time,time1;
+      boolean flag=true;
 
       BNO055IMU imu;
       Orientation angles;
@@ -92,7 +93,8 @@
 
       @Override
       public void runOpMode() {
-
+          if(gamepad1.a)
+          flag=false;
           telemetry.addData("Status", "初始化完毕");
           initCamJet();
 
@@ -117,69 +119,69 @@
           runtime.reset();
 
           // run until the end of the match (driver presses STOP)
-
+          if(flag) {
 //region 着陆
-          // region 空降
-          while(opModeIsActive()){
-              gravity =imu.getGravity();
-              double yA=gravity.yAccel;
-              if (yA < -0.2) {
-                  motor_xuangua.setPower(-0.7);
-                  telemetry.addData("瞬时速度",-0.7);
-                  composeTelemetry();
-                  telemetry.update();
-              }
-              else {
-                  motor_xuangua.setPower(0);
-                  time=time1 = runtime.milliseconds();
-                  telemetry.addData(">","空降已完成");
-                  telemetry.update();
-                  break;
+              // region 空降
+              while (opModeIsActive()) {
+                  gravity = imu.getGravity();
+                  double yA = gravity.yAccel;
+                  if (yA > 0) {
+                      motor_xuangua.setPower(-0.7);
+                      telemetry.addData("瞬时速度", -0.7);
+                      composeTelemetry();
+                      telemetry.update();
+                  } else {
+                      motor_xuangua.setPower(0);
+                      time = time1 = runtime.milliseconds();
+                      telemetry.addData(">", "空降已完成");
+                      telemetry.update();
+                      break;
                   }
-          }
-            //endregion
-          //region 脱离
-          while(opModeIsActive()) {
-              if (runtime.milliseconds() - time < 500)
-                  runMotor(formal1.MotorMode.Forward);
-              else {
-                  runMotor(formal1.MotorMode.Stop);
-                  time = runtime.milliseconds();
-                  telemetry.addData(">","完成脱离");
-                  telemetry.update();
-                  break;
               }
-          }
-           //endregion
-          //region 回收
-          while(opModeIsActive()){
-             if (runtime.milliseconds()-time<=time1)
-                  motor_xuangua.setPower(0.8);
-             else{
-                  motor_xuangua.setPower(0);
-                  telemetry.addData(">","完成回收");
-                  telemetry.update();
-                  break;
-             }
-          }
-           //endregion
-          telemetry.addData(">>","完美着陆");
-          telemetry.update();
+              //endregion
+              //region 脱离
+              while (opModeIsActive()) {
+                  if (runtime.milliseconds() - time < 500)
+                      runMotor(formal1.MotorMode.Forward);
+                  else {
+                      runMotor(formal1.MotorMode.Stop);
+                      time = runtime.milliseconds();
+                      telemetry.addData(">", "完成脱离");
+                      telemetry.update();
+                      break;
+                  }
+              }
+              //endregion
+              //region 回收
+              while (opModeIsActive()) {
+                  if (runtime.milliseconds() - time <= time1)
+                      motor_xuangua.setPower(0.8);
+                  else {
+                      motor_xuangua.setPower(0);
+                      telemetry.addData(">", "完成回收");
+                      telemetry.update();
+                      break;
+                  }
+              }
+              //endregion
+              telemetry.addData(">>", "完美着陆");
+              telemetry.update();
 //endregion
+          }
 //region 取样
           telemetry.addData(">>>","进入取样阶段");
-          telemetry.update();
           //region 瞄准
           if (opModeIsActive()) {
               /** Activate Tensor Flow Object Detection. */
               if (tfod != null) {
                   tfod.activate();
-                  angle = 100;
                   telemetry.addData(">","超级瞄准已部署");
               }
           }
+          telemetry.update();
           while (opModeIsActive()){
-
+              goldDe=false;
+              angle=100;
               List<Recognition> updatedRecognition =tfod.getUpdatedRecognitions();
               if(updatedRecognition != null) {
                   for(Recognition recognition:updatedRecognition) {
@@ -191,7 +193,7 @@
                               else isleft=false;
                               telemetry.addData("<","发现敌人");
                               telemetry.addData("角度:",angle);
-
+                              telemetry.addData(">>>>>>",recognition.getTop());
                           }
                   }
                   if(goldDe) {
@@ -212,19 +214,23 @@
                           break;
                       }
                   }
+                  telemetry.update();
               }
               telemetry.update();
           }
           //endregion
           //region 攻击
           while (opModeIsActive()){
-              if (time - runtime.milliseconds() <= 6000){
-                  runMotor(formal1.MotorMode.Right);
-              }else{
-                  runMotor(formal1.MotorMode.Stop);
-                  time = runtime.milliseconds();
-                  break;
-              }
+//              if (time - runtime.milliseconds() <= 6000){
+//                  runMotor(formal1.MotorMode.Right);
+//              }else{
+//                  runMotor(formal1.MotorMode.Stop);
+//                  time = runtime.milliseconds();
+//                  break;
+//              }
+//              runMotor(formal1.MotorMode.Right);
+//              sleep(2000);
+//              runMotor(formal1.MotorMode.Stop);
           }
 
           //endregion
@@ -232,14 +238,12 @@
 //endregion
 //region 宣示主权+停止
           while(opModeIsActive()){
-              if(runtime.milliseconds() - time == 1){
-                  motor_tian.setPower(-1);
-              }else{
-                  motor_tian.setPower(0);
+                  motor_xuanzhuan.setPower(-1);
+                  sleep(1000);
+                  motor_xuanzhuan.setPower(0);
                   telemetry.addData("我方主权", "已宣示");
                   telemetry.update();
                   break;
-              }
           }
 
 
@@ -247,7 +251,7 @@
 //region 停止
           if(opModeIsActive()){
           runMotor(0,0,0,0);
-          motor_tian.setPower(0);
+          motor_xuanzhuan.setPower(0);
           telemetry.addData("自动阶段","完成");
       }
 
@@ -292,7 +296,7 @@
                   motor_zuohou.setPower(0);
                   motor_youqian.setPower(0);
                   motor_youhou.setPower(0);
-                  motor_tian.setPower(0);
+                  motor_xuanzhuan.setPower(0);
               case Clock:
                   motor_zuoqian.setPower(0.23);
                   motor_zuohou.setPower(0.23);
